@@ -1,6 +1,8 @@
 import random
 import math
 import time
+import os
+
 
 def sigmoid(x):
     return 1 / (1 + math.exp(-x))
@@ -18,26 +20,38 @@ def one_hot(index, size):
     vec[index] = 1
     return vec
 
+
 # === Données d'entraînement ===
 text = "Brumeville, petite cité au bord d’un lac immobile, semblait vivre dans une éternelle aube. Les rues y étaient pavées de pierres pâles, et les fenêtres reflétaient une lumière sans soleil. On disait que le vent lui-même y marchait à pas comptés, et quiconque y restait trop longtemps finissait par perdre la notion des jours. Elian, horloger de métier, s’était installé là cinq ans plus tôt. Il cherchait le silence, et il l’avait trouvé. Le lendemain, les horloges de la ville s’étaient toutes arrêtées à minuit. Les passants erraient, confus, parlant de la lune qui ne voulait plus partir. Elian sentit une inquiétude nouvelle. La montre noire pulsait sur son établi, comme un cœur vivant. Il décida de monter à la tour de l’Est, dont les habitants parlaient avec crainte. Là-haut, il découvrit une immense horloge fissurée, dont les engrenages semblaient faits d’ombres. Et sur le sol, il trouva un fragment d’aiguille — argentée, fine, chaude au toucher. Quand il la plaça dans la montre noire, un murmure remplit la pièce : des voix d’hommes et de femmes, de vieillards et d’enfants, tous murmurant : « Remets-nous en marche. » "
+
+print("=== Texte sur lequel l'IA va s'entrainer ===")
+print(f"TEXTE : \n{text}")
 
 words = text.split()
 vocab = sorted(list(set(words)))
 word_to_idx = {w: i for i, w in enumerate(vocab)}
 idx_to_word = {i: w for i, w in enumerate(vocab)}
 
+
 # === Paramètres du réseau ===
 input_size = len(vocab) * 2
 output_size = len(vocab)
 hidden_size = 10
-learning_rate = 0.5
-epochs = 100  
+learning_rate = 0.55
+epochs = 100
+
 
 # === Poids et biais ===
 weights_input_hidden = [[random.uniform(-0.1, 0.1) for _ in range(input_size)] for _ in range(hidden_size)]
 weights_hidden_output = [[random.uniform(-0.1, 0.1) for _ in range(hidden_size)] for _ in range(output_size)]
 bias_hidden = [random.uniform(-0.1, 0.1) for _ in range(hidden_size)]
 bias_output = [random.uniform(-0.1, 0.1) for _ in range(output_size)]
+
+
+# === Autres ===
+temps_final = 0
+precision_final = 0
+
 
 # === Fonction de précision ===
 def accuracy():
@@ -50,6 +64,7 @@ def accuracy():
         if pred_idx == word_to_idx[words[i]]:
             correct += 1
     return correct / (len(words) - 2) * 100
+
 
 # === Entraînement ===
 for epoch in range(epochs):
@@ -78,9 +93,13 @@ for epoch in range(epochs):
                 weights_input_hidden[h][j] += learning_rate * d_hidden[h] * x[j]
             bias_hidden[h] += learning_rate * d_hidden[h]
 
+
     # === Mesure du temps et affichage ===
     duration = time.time() - start_time
-    acc = accuracy()
+    acc = accuracy() / 100
+    if acc >= precision_final:
+        precision_final = acc
+
 
     # Génération rapide d’un court texte pour visualiser les progrès
     seed_words = [words[0], words[1]]
@@ -92,13 +111,15 @@ for epoch in range(epochs):
         output = softmax([sum(hidden[h]*weights_hidden_output[o][h] for h in range(hidden_size)) + bias_output[o] for o in range(output_size)])
         next_word = idx_to_word[output.index(max(output))]
         generated.append(next_word)
-
+    temps_final += duration
+    os.system('clear')
     print(f"\n=== Epoch {epoch+1}/{epochs} ===")
     print(f"Temps écoulé : {duration:.2f} sec")
-    print(f"Précision : {acc:.2f}%")
-    print("Texte généré :", ' '.join(generated))
+    print(f"Précision    : {acc:.7f}")
+
 
 # === Génération finale longue ===
+os.system('clear')
 print("\n=== Texte final généré ===")
 seed_words = [words[0], words[1]]
 generated = seed_words[:]
@@ -110,4 +131,7 @@ for _ in range(max_length - 2):
     next_word = idx_to_word[output.index(max(output))]
     generated.append(next_word)
 
+
 print(' '.join(generated))
+print(f"\nTemps final     : {temps_final:.2f} sec")
+print(f"Précision final : {precision_final:.7f}")
